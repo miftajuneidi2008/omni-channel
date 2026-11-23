@@ -1,0 +1,306 @@
+{
+  "name": "Omni Channel",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "enrich-lead",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-304, 0],
+      "id": "0b498b08-c9c7-410d-99fd-291ce81d1216",
+      "name": "Webhook",
+      "webhookId": "d9942044-4d05-4836-8f78-3240bc6cedbe",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "TRfj3xcBDyJxu377",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c8b1e56a-28b1-43e5-b525-e71ceb22d2a2",
+              "leftValue": "={{ $json.body.lead.companyDomain }}",
+              "rightValue": ".invalid",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            },
+            {
+              "id": "405bbf74-a2ee-4dab-858b-6fb015a2470f",
+              "leftValue": "={{ $json.body.lead.companyDomain }}",
+              "rightValue": ".",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [-128, 0],
+      "id": "647fb642-869b-4fea-9b7d-85e051c8db68",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://localhost:3000{{ $('Webhook').item.json.body.callbackUrl }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-webhook-secret",
+              "value": "nexusflow-secret-2026"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"leadId\": \"{{ $('Webhook').item.json.body.leadId }}\",\n  \"status\": \"FAILED\",\n  \"errorReason\": \"Invalid domain schema\",\n  \"stepLog\": {\n    \"stepName\": \"Step 1/4: Schema validation failed\",\n    \"status\": \"ERROR\",\n    \"durationMs\": 45\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [192, 80],
+      "id": "32acc387-83f8-4cd9-a2a4-0d2e54c3c5ed",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{'http://host.docker.internal:3000' + $('Webhook').item.json.body.callbackUrl }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-webhook-secret",
+              "value": "nexusflow-secret-2026"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"leadId\": \"{{ $('Webhook').item.json.body.leadId }}\",\n  \"status\": \"ENRICHING\",\n  \"currentStep\": \"Step 2/4: Querying firmographics\",\n  \"stepLog\": {\n    \"stepName\": \"Step 2/4: Querying firmographics\",\n    \"status\": \"SUCCESS\",\n    \"durationMs\": 120\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [32, -128],
+      "id": "fc52ab4c-9c5d-4aa4-945e-dc96766dc8c5",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "amount": 1.5
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [192, -128],
+      "id": "0d58c9c6-15cc-48e7-8d4e-d7644956cf6e",
+      "name": "Wait",
+      "webhookId": "f9616aba-2f38-4afe-a182-0bbd02bf4083"
+    },
+    {
+      "parameters": {
+        "jsCode": "const startTime = Date.now();\nconst body = $('Webhook').item.json.body;\nconst domain = (body.companyDomain || '').toLowerCase();\n\n// Deterministic scoring & enrichment based on domain keywords\nconst isVip =\n  domain.includes('bank') ||\n  domain.includes('fintech') ||\n  domain.includes('cloud') ||\n  domain.includes('global') ||\n  domain.includes('systems');\n\nconst vipStacks = [\n  ['Next.js', 'AWS', 'Stripe'],\n  ['React', 'AWS', 'PostgreSQL']\n];\nconst smbStacks = [\n  ['React', 'Shopify', 'Google Cloud'],\n  ['Python', 'GCP', 'Snowflake']\n];\n\nconst leadScore = isVip\n  ? Math.floor(Math.random() * 11) + 88   // 88 - 98\n  : Math.floor(Math.random() * 25) + 50;  // 50 - 74\n\nreturn [\n  {\n    json: {\n      leadId: body.leadId,\n      leadScore,\n      estimatedArr: isVip ? '$50M–$120M' : '$2M–$10M',\n      companySize: isVip ? '1,000–5,000 employees' : '50–200 employees',\n      techStack: isVip ? vipStacks[0] : smbStacks[0],\n      assignedRep: isVip ? 'Maya Chen · Enterprise AE' : 'Nurture Automation',\n      aiSummary: isVip\n        ? `High-intent enterprise account (${domain}) running a modern cloud stack. Priority outreach recommended.`\n        : `Growing SMB prospect (${domain}). Enrolled in automated product-led nurture sequence.`,\n      durationMs: Date.now() - startTime + 185\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [336, -128],
+      "id": "0c777fcf-c0a5-4e3a-a464-951faf1e271d",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a7bede93-1045-444a-8c53-13e5392655d6",
+              "leftValue": "={{ $json.leadScore }}",
+              "rightValue": 80,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [496, -128],
+      "id": "d8b51386-0721-4385-b90d-d086ddbd926d",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{'http://host.docker.internal:3000' + $('Webhook').item.json.body.callbackUrl }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-webhook-secret",
+              "value": "nexusflow-secret-2026"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"leadId\": \"{{ $json.leadId }}\",\n  \"status\": \"VIP_QUALIFIED\",\n  \"enrichmentData\": {\n    \"leadScore\": {{ $json.leadScore }},\n    \"estimatedArr\": \"{{ $json.estimatedArr }}\",\n    \"companySize\": \"{{ $json.companySize }}\",\n    \"techStack\": {{ JSON.stringify($json.techStack) }},\n    \"assignedRep\": \"{{ $json.assignedRep }}\",\n    \"aiSummary\": \"{{ $json.aiSummary }}\"\n  },\n  \"stepLog\": {\n    \"stepName\": \"Step 4/4: Routed to VIP Enterprise Queue\",\n    \"status\": \"SUCCESS\",\n    \"durationMs\": {{ $json.durationMs }}\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [672, -160],
+      "id": "3b81bd9a-e3f5-4853-888f-6241aebade7c",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{'http://host.docker.internal:3000' + $('Webhook').item.json.body.callbackUrl }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-webhook-secret",
+              "value": "nexusflow-secret-2026"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"leadId\": \"{{ $json.leadId }}\",\n  \"status\": \"STANDARD_NURTURE\",\n  \"enrichmentData\": {\n    \"leadScore\": {{ $json.leadScore }},\n    \"estimatedArr\": \"{{ $json.estimatedArr }}\",\n    \"companySize\": \"{{ $json.companySize }}\",\n    \"techStack\": {{ JSON.stringify($json.techStack) }},\n    \"assignedRep\": \"{{ $json.assignedRep }}\",\n    \"aiSummary\": \"{{ $json.aiSummary }}\"\n  },\n  \"stepLog\": {\n    \"stepName\": \"Step 4/4: Enrolled in Nurture Sequence\",\n    \"status\": \"STANDARD_NURTURE\",\n    \"durationMs\": {{ $json.durationMs }}\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [752, -16],
+      "id": "511b067f-3bc3-48f6-910f-4c36e93b3c07",
+      "name": "HTTP Request3"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "0645e967-f8c4-4ae9-95bc-5033127eb3b6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "17a3e965cffada9adc9cfc81411858e7d65f843eb114d35d13ec9327a371f150"
+  },
+  "id": "NYhTNSuqfuvCuhPK",
+  "tags": []
+}

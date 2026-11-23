@@ -1,8 +1,8 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
+# Dependencies
 /node_modules
-/.pnp
+/docs
+docs/
+/.pnp    
 .pnp.*
 .yarn/*
 !.yarn/patches
@@ -10,32 +10,42 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
+# Testing
 /coverage
 
-# next.js
+# Next.js build output
 /.next/
 /out/
 
-# production
+# Production & misc
 /build
+*.tsbuildinfo
+next-env.d.ts
 
-# misc
-.DS_Store
-*.pem
+# Environment variables & secrets
+.env
+.env*.local
+!.env.example
 
-# debug
+# Prisma & local database files
+/prisma/*.db
+/prisma/*.db-journal
+/prisma/migrations/*_local*/
+
+# Docker / n8n local runtime data (keep docker-compose.yml and exported workflow JSONs)
+/n8n_data/
+/n8n/credentials/
+
+# Logs & debug files
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+.DS_Store
+*.pem
 
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# IDE & OS files (optional: remove .vscode if you share editor settings)
+.idea/
+*.swp
+*.swo

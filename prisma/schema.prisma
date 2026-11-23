@@ -1,0 +1,55 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+enum LeadStatus {
+  PENDING
+  ENRICHING
+  VIP_QUALIFIED
+  STANDARD_NURTURE
+  FAILED
+}
+
+model Lead {
+  id            String        @id @default(cuid())
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Raw Input Fields
+  fullName      String
+  email         String
+  companyDomain String
+  sourceChannel String        // e.g., "Web Form", "LinkedIn Ad", "API Webhook"
+  rawMessage    String?
+
+  // Enriched Data (Populated asynchronously by n8n)
+  status        LeadStatus    @default(PENDING)
+  leadScore     Int?          // 0 - 100
+  companySize   String?       // e.g., "1,000 - 5,000 employees"
+  estimatedArr  String?       // e.g., "$50M - $120M"
+  techStack     String[]      // e.g., ["Next.js", "AWS", "PostgreSQL"]
+  aiSummary     String?       // Generated intent summary & pitch angle
+  assignedRep   String?       // Routed owner based on qualification tier
+
+  logs          PipelineLog[]
+}
+
+model PipelineLog {
+  id         String   @id @default(cuid())
+  leadId     String
+  lead       Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  stepName   String   
+  status     String   
+  durationMs Int?     
+  metadata   Json?    
+  createdAt  DateTime @default(now())
+}
