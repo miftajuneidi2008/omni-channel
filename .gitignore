@@ -9,9 +9,10 @@ docs/
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
-/.agents
-/.claude
-/.windsurf
+.agents/
+.claude/
+.next/
+.windsurf/
 # Testing
 /coverage
 
